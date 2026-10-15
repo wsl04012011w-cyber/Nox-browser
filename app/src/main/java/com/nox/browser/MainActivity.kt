@@ -90,9 +90,7 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
-        @Suppress("DEPRECATION")
-        window.decorView.systemUiVisibility =
-            View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        // Keep the Android status bar visible.
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
@@ -122,11 +120,6 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.TRANSPARENT)
         }
 
-        pageTitle = TextView(this).apply {
-            text = "Nox Browser"
-            textSize = 10f
-            setTextColor(secondaryColor)
-        }
         val addressRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -173,6 +166,10 @@ class MainActivity : Activity() {
         }
         addressRow.addView(searchIcon)
         addressRow.addView(addressBar, LinearLayout.LayoutParams(0, dp(40), 1f))
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        actions.addView(makeButton("↻", "Recarregar") { webView?.reload() }, LinearLayout.LayoutParams(dp(36), dp(40)))
+        actions.addView(makeButton("⋮", "Ferramentas") { showSettingsPanel() }, LinearLayout.LayoutParams(dp(36), dp(40)))
+        addressRow.addView(actions)
         topChrome.addView(addressRow, LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT, dp(42)
         ).apply { marginStart = dp(4); marginEnd = dp(4) })
@@ -200,7 +197,6 @@ class MainActivity : Activity() {
         controls.addView(makeButton("›", "Avançar") {
             webView?.let { if (it.canGoForward()) it.goForward() }
         })
-        controls.addView(makeButton("↻", "Recarregar") { webView?.reload() })
         controls.addView(makeButton("⌂", "Início") { goHome() })
         tabsButton = makeButton(tabs.size.toString(), "Abas abertas") { showTabPicker() }
         controls.addView(tabsButton)
@@ -239,6 +235,55 @@ class MainActivity : Activity() {
             }
             setOnClickListener { action() }
         }
+    }
+
+    private fun showSettingsPanel() {
+        val dialog = Dialog(this)
+        val panel = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(16), dp(20), dp(22))
+            background = GradientDrawable().apply {
+                setColor(0xFF08090B.toInt())
+                cornerRadii = floatArrayOf(24f,24f,24f,24f,24f,24f,0f,0f)
+                setStroke(dp(1), 0x28FFFFFF)
+            }
+        }
+        panel.addView(TextView(this).apply { text = "Ferramentas"; textSize = 21f; setTextColor(fgColor); setPadding(0,0,0,dp(12)) })
+        fun item(label: String, action: () -> Unit) {
+            panel.addView(TextView(this).apply {
+                text = label; textSize = 15f; setTextColor(fgColor); gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(12),0,dp(12),0); isClickable = true
+                setOnClickListener { dialog.dismiss(); action() }
+            }, LinearLayout.LayoutParams(-1, dp(48)))
+        }
+        item("▣   Modo desktop") {
+            val v = webView
+            if (v != null) {
+                val desktop = !v.settings.userAgentString.contains("X11; Linux", true)
+                v.settings.useWideViewPort = true; v.settings.loadWithOverviewMode = true
+                v.settings.userAgentString = if (desktop) "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36" else WebSettings.getDefaultUserAgent(this)
+                v.reload()
+            }
+        }
+        item("↓   Downloads") { try { startActivity(android.content.Intent(android.app.DownloadManager.ACTION_VIEW_DOWNLOADS)) } catch (_: Exception) {} }
+        item("◷   Histórico") { showHistoryPanel() }
+        item("⚙   Configurações") { android.widget.Toast.makeText(this, "Nox Browser • AMOLED • cookies de terceiros bloqueados", android.widget.Toast.LENGTH_LONG).show() }
+        item("⌂   Página inicial") { goHome() }
+        dialog.setContentView(panel)
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.setLayout(-1, -2)
+        dialog.window?.setGravity(Gravity.BOTTOM)
+    }
+
+    private fun showHistoryPanel() {
+        val dialog = Dialog(this)
+        val panel = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(dp(18),dp(16),dp(18),dp(16)); setBackgroundColor(0xFF08090B.toInt()) }
+        panel.addView(TextView(this).apply { text = "Histórico"; textSize = 22f; setTextColor(fgColor) })
+        panel.addView(TextView(this).apply { text = "As páginas visitadas aparecerão aqui."; textSize = 14f; setTextColor(secondaryColor); setPadding(0,dp(12),0,0) })
+        dialog.setContentView(panel); dialog.window?.setBackgroundDrawableResource(android.R.color.transparent); dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent); dialog.window?.setLayout(-1,-2)
     }
 
     private fun dismissSuggestions() {
@@ -561,18 +606,18 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER
             setPadding(0, dp(5), 0, dp(25))
         }
-        val searchHint = TextView(this).apply {
-            text = "⌕   Pesquisar ou digitar endereço"
-            textSize = 14f
-            setTextColor(secondaryColor)
+        val searchHint = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
             setPadding(dp(18), 0, dp(18), 0)
-            background = glassBackground(glassFill, 24f)
+            setBackgroundColor(Color.TRANSPARENT)
+            isClickable = true
+            addView(TextView(this@MainActivity).apply { text = "⌕"; textSize = 21f; setTextColor(secondaryColor); setPadding(0, 0, dp(12), 0) })
+            addView(TextView(this@MainActivity).apply { text = "Pesquisar ou digitar endereço"; textSize = 14f; setTextColor(secondaryColor) })
             setOnClickListener {
                 addressBar.requestFocus()
-                val inputManager =
-                    getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                inputManager.showSoftInput(addressBar, InputMethodManager.SHOW_IMPLICIT)
+                addressBar.setSelection(addressBar.text.length)
+                (getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager).showSoftInput(addressBar, InputMethodManager.SHOW_IMPLICIT)
             }
         }
         home.addView(logo)
