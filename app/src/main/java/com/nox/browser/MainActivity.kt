@@ -18,6 +18,7 @@ import android.view.Gravity
 import android.view.KeyEvent
 import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InputMethodManager
 import android.webkit.CookieManager
@@ -80,6 +81,9 @@ class MainActivity : Activity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = Color.BLACK
         window.navigationBarColor = Color.BLACK
+        @Suppress("DEPRECATION")
+        window.decorView.systemUiVisibility =
+            View.SYSTEM_UI_FLAG_FULLSCREEN or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
@@ -101,7 +105,7 @@ class MainActivity : Activity() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bgColor)
-            setPadding(dp(8), dp(6), dp(8), dp(3))
+            setPadding(dp(4), dp(2), dp(4), dp(2))
         }
 
         topChrome = LinearLayout(this).apply {
@@ -112,11 +116,11 @@ class MainActivity : Activity() {
         val brandRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(4), 0, dp(4), dp(2))
+            setPadding(dp(3), 0, dp(3), 0)
         }
         val brand = TextView(this).apply {
             text = "nox"
-            textSize = 24f
+            textSize = 20f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
             setTextColor(fgColor)
             setPadding(dp(4), 0, dp(10), 0)
@@ -131,20 +135,20 @@ class MainActivity : Activity() {
             gravity = Gravity.CENTER_VERTICAL
         }
         brandRow.addView(brand)
-        brandRow.addView(pageTitle, LinearLayout.LayoutParams(0, dp(38), 1f))
+        brandRow.addView(pageTitle, LinearLayout.LayoutParams(0, dp(27), 1f))
         topChrome.addView(brandRow)
 
         addressBar = EditText(this).apply {
             hint = "Pesquisar ou digitar endereço"
             setHintTextColor(secondaryColor)
             setTextColor(fgColor)
-            textSize = 15f
+            textSize = 14f
             setSingleLine(true)
             imeOptions = EditorInfo.IME_ACTION_GO
             inputType = android.text.InputType.TYPE_CLASS_TEXT or
                 android.text.InputType.TYPE_TEXT_VARIATION_URI
-            setPadding(dp(16), 0, dp(14), 0)
-            background = glassBackground(glassFill, 23f)
+            setPadding(dp(13), 0, dp(12), 0)
+            background = glassBackground(glassFill, 20f)
             setSelectAllOnFocus(true)
             includeFontPadding = false
             setOnEditorActionListener { _, actionId, event ->
@@ -159,10 +163,10 @@ class MainActivity : Activity() {
         }
         val addressParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            dp(48)
+            dp(40)
         ).apply {
-            topMargin = dp(5)
-            bottomMargin = dp(9)
+            topMargin = dp(2)
+            bottomMargin = dp(4)
             marginStart = dp(2)
             marginEnd = dp(2)
         }
@@ -181,9 +185,9 @@ class MainActivity : Activity() {
         controls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(4), dp(4), dp(4), dp(4))
-            background = glassBackground(0xE80D0E11.toInt(), 25f)
-            elevation = dp(5).toFloat()
+            setPadding(dp(3), dp(2), dp(3), dp(2))
+            background = glassBackground(0xD908090B.toInt(), 20f)
+            elevation = dp(2).toFloat()
         }
         controls.addView(makeButton("‹", "Voltar") {
             webView?.let { if (it.canGoBack()) it.goBack() }
@@ -198,10 +202,10 @@ class MainActivity : Activity() {
         controls.addView(makeButton("+", "Nova aba") { createTab(HOME_URL, activate = true) })
         val controlsParams = LinearLayout.LayoutParams(
             LinearLayout.LayoutParams.MATCH_PARENT,
-            dp(54)
+            dp(42)
         ).apply {
-            topMargin = dp(5)
-            bottomMargin = dp(2)
+            topMargin = dp(2)
+            bottomMargin = dp(1)
             marginStart = dp(1)
             marginEnd = dp(1)
         }
@@ -214,9 +218,9 @@ class MainActivity : Activity() {
         return Button(this).apply {
             text = label
             contentDescription = description
-            textSize = 19f
+            textSize = 17f
             setTextColor(if (label == "+") accentColor else fgColor)
-            background = glassBackground(0x3AFFFFFF, 18f)
+            background = glassBackground(0x20FFFFFF, 15f)
             isAllCaps = false
             minWidth = 0
             minimumWidth = 0
@@ -224,9 +228,9 @@ class MainActivity : Activity() {
             minimumHeight = 0
             stateListAnimator = null
             setPadding(dp(2), 0, dp(2), 0)
-            layoutParams = LinearLayout.LayoutParams(0, dp(43), 1f).apply {
-                marginStart = dp(2)
-                marginEnd = dp(2)
+            layoutParams = LinearLayout.LayoutParams(0, dp(35), 1f).apply {
+                marginStart = dp(1)
+                marginEnd = dp(1)
             }
             setOnClickListener { action() }
         }
