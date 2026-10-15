@@ -46,16 +46,16 @@ class MainActivity : Activity() {
     private var activeTabId: Long = -1L
     private var nextId: Long = 1L
 
-    private val background = Color.rgb(18, 20, 24)
-    private val surface = Color.rgb(29, 32, 38)
-    private val foreground = Color.rgb(238, 240, 244)
-    private val secondary = Color.rgb(157, 164, 176)
-    private val accent = Color.rgb(145, 190, 255)
+    private val bgColor = Color.rgb(18, 20, 24)
+    private val surfaceColor = Color.rgb(29, 32, 38)
+    private val fgColor = Color.rgb(238, 240, 244)
+    private val secondaryColor = Color.rgb(157, 164, 176)
+    private val accentColor = Color.rgb(145, 190, 255)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        window.statusBarColor = background
-        window.navigationBarColor = background
+        window.statusBarColor = bgColor
+        window.navigationBarColor = bgColor
 
         prefs = getSharedPreferences("nox_session", Context.MODE_PRIVATE)
         restoreTabs()
@@ -72,7 +72,7 @@ class MainActivity : Activity() {
     private fun buildUi() {
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(background)
+            setBackgroundColor(bgColor)
             setPadding(dp(10), dp(8), dp(10), dp(4))
         }
 
@@ -84,13 +84,13 @@ class MainActivity : Activity() {
             text = "nox"
             textSize = 23f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setTextColor(foreground)
+            setTextColor(fgColor)
             setPadding(dp(4), 0, dp(8), 0)
         }
         pageTitle = TextView(this).apply {
             text = "Less noise. More web."
             textSize = 12f
-            setTextColor(secondary)
+            setTextColor(secondaryColor)
             maxLines = 1
         }
         brandRow.addView(brand)
@@ -99,15 +99,15 @@ class MainActivity : Activity() {
 
         addressBar = EditText(this).apply {
             hint = "Search or enter address"
-            setHintTextColor(secondary)
-            setTextColor(foreground)
+            setHintTextColor(secondaryColor)
+            setTextColor(fgColor)
             textSize = 15f
-            singleLine = true
+            setSingleLine(true)
             imeOptions = EditorInfo.IME_ACTION_GO
             inputType = android.text.InputType.TYPE_CLASS_TEXT or
                 android.text.InputType.TYPE_TEXT_VARIATION_URI
             setPadding(dp(14), 0, dp(12), 0)
-            setBackgroundColor(surface)
+            setBackgroundColor(surfaceColor)
             setSelectAllOnFocus(true)
             setOnEditorActionListener { _, actionId, event ->
                 val enterPressed = event?.keyCode == KeyEvent.KEYCODE_ENTER
@@ -130,7 +130,7 @@ class MainActivity : Activity() {
 
         webContainer = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setBackgroundColor(background)
+            setBackgroundColor(bgColor)
         }
         root.addView(
             webContainer,
@@ -163,8 +163,8 @@ class MainActivity : Activity() {
             text = label
             contentDescription = description
             textSize = 18f
-            setTextColor(foreground)
-            setBackgroundColor(background)
+            setTextColor(fgColor)
+            setBackgroundColor(bgColor)
             isAllCaps = false
             minWidth = 0
             minimumWidth = 0
@@ -297,27 +297,27 @@ class MainActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(24), dp(24), dp(24), dp(24))
-            setBackgroundColor(background)
+            setBackgroundColor(bgColor)
         }
         val logo = TextView(this).apply {
             text = "nox"
             textSize = 46f
             typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setTextColor(foreground)
+            setTextColor(fgColor)
             gravity = Gravity.CENTER
         }
         val tagline = TextView(this).apply {
             text = "Less noise. More web."
             textSize = 14f
-            setTextColor(secondary)
+            setTextColor(secondaryColor)
             gravity = Gravity.CENTER
             setPadding(0, dp(4), 0, dp(18))
         }
         val searchHint = Button(this).apply {
             text = "Tap the address bar to search"
             textSize = 14f
-            setTextColor(accent)
-            setBackgroundColor(surface)
+            setTextColor(accentColor)
+            setBackgroundColor(surfaceColor)
             isAllCaps = false
             setOnClickListener {
                 addressBar.requestFocus()
