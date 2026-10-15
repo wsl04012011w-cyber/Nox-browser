@@ -109,6 +109,8 @@ class MainActivity : Activity() {
     }
 
     private fun buildUi() {
+        // Internal title holder used by WebView callbacks; intentionally not shown in the UI.
+        pageTitle = TextView(this)
         val root = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setBackgroundColor(bgColor)
@@ -421,15 +423,7 @@ class MainActivity : Activity() {
                 oldY: Int
             ) {
                 super.onScrollChanged(x, y, oldX, oldY)
-                val delta = y - oldY
-                val now = SystemClock.uptimeMillis()
-                if (now - lastChromeToggleAt > 260L && abs(delta) > dp(7)) {
-                    if (delta > 0 && y > dp(45)) {
-                        setChromeVisible(false)
-                    } else if (delta < 0 || y <= dp(4)) {
-                        setChromeVisible(true)
-                    }
-                }
+                // Keep browser controls visible while scrolling; no immersive auto-hide.
                 lastScrollY = y
             }
         }
