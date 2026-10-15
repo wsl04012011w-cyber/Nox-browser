@@ -33,6 +33,11 @@ import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
 import android.widget.LinearLayout
+import android.widget.PopupWindow
+import android.widget.ListView
+import android.widget.ArrayAdapter
+import android.text.Editable
+import android.text.TextWatcher
 import android.widget.ScrollView
 import android.widget.TextView
 import org.json.JSONArray
@@ -40,6 +45,8 @@ import org.json.JSONObject
 import java.io.ByteArrayInputStream
 import java.io.File
 import java.io.FileOutputStream
+import java.net.HttpURLConnection
+import java.net.URL
 import java.util.Locale
 import kotlin.math.abs
 
@@ -53,6 +60,8 @@ class MainActivity : Activity() {
 
     private lateinit var prefs: SharedPreferences
     private lateinit var addressBar: EditText
+    private var suggestionPopup: PopupWindow? = null
+    private var suggestionTask: Runnable? = null
     private lateinit var pageTitle: TextView
     private lateinit var webContainer: LinearLayout
     private lateinit var tabsButton: Button
@@ -113,33 +122,27 @@ class MainActivity : Activity() {
             setBackgroundColor(Color.TRANSPARENT)
         }
 
-        val brandRow = LinearLayout(this).apply {
+        pageTitle = TextView(this).apply {
+            text = "Nox Browser"
+            textSize = 10f
+            setTextColor(secondaryColor)
+        }
+        val addressRow = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(dp(3), 0, dp(3), 0)
+            setPadding(dp(8), 0, dp(8), 0)
+            background = Color.TRANSPARENT.toDrawableCompat()
         }
-        val brand = TextView(this).apply {
-            text = "nox"
-            textSize = 20f
-            typeface = Typeface.create("sans-serif", Typeface.BOLD)
-            setTextColor(fgColor)
-            setPadding(dp(4), 0, dp(10), 0)
-            letterSpacing = -0.04f
-        }
-        pageTitle = TextView(this).apply {
-            text = "LESS NOISE. MORE WEB."
-            textSize = 10f
-            letterSpacing = 0.09f
+        val searchIcon = TextView(this).apply {
+            text = "⌕"
+            textSize = 23f
             setTextColor(secondaryColor)
-            maxLines = 1
-            gravity = Gravity.CENTER_VERTICAL
+            gravity = Gravity.CENTER
+            contentDescription = "Pesquisar"
+            setPadding(dp(5), 0, dp(8), 0)
         }
-        brandRow.addView(brand)
-        brandRow.addView(pageTitle, LinearLayout.LayoutParams(0, dp(27), 1f))
-        topChrome.addView(brandRow)
-
         addressBar = EditText(this).apply {
-            hint = "Pesquisar ou digitar endereço"
+            hint = "Pesquisar"
             setHintTextColor(secondaryColor)
             setTextColor(fgColor)
             textSize = 14f
@@ -147,30 +150,32 @@ class MainActivity : Activity() {
             imeOptions = EditorInfo.IME_ACTION_GO
             inputType = android.text.InputType.TYPE_CLASS_TEXT or
                 android.text.InputType.TYPE_TEXT_VARIATION_URI
-            setPadding(dp(13), 0, dp(12), 0)
-            background = glassBackground(glassFill, 20f)
+            setPadding(0, 0, dp(4), 0)
+            background = null
             setSelectAllOnFocus(true)
             includeFontPadding = false
             setOnEditorActionListener { _, actionId, event ->
                 val enterPressed = event?.keyCode == KeyEvent.KEYCODE_ENTER
                 if (actionId == EditorInfo.IME_ACTION_GO || enterPressed) {
+                    dismissSuggestions()
                     navigateFromAddress()
                     true
-                } else {
-                    false
-                }
+                } else false
             }
+            addTextChangedListener(object : TextWatcher {
+                override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+                override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                    scheduleSuggestions(s?.toString().orEmpty())
+                }
+                override fun afterTextChanged(s: Editable?) {}
+            })
+            setOnFocusChangeListener { _, focused -> if (!focused) dismissSuggestions() }
         }
-        val addressParams = LinearLayout.LayoutParams(
-            LinearLayout.LayoutParams.MATCH_PARENT,
-            dp(40)
-        ).apply {
-            topMargin = dp(2)
-            bottomMargin = dp(4)
-            marginStart = dp(2)
-            marginEnd = dp(2)
-        }
-        topChrome.addView(addressBar, addressParams)
+        addressRow.addView(searchIcon)
+        addressRow.addView(addressBar, LinearLayout.LayoutParams(0, dp(40), 1f))
+        topChrome.addView(addressRow, LinearLayout.LayoutParams(
+            LinearLayout.LayoutParams.MATCH_PARENT, dp(42)
+        ).apply { marginStart = dp(4); marginEnd = dp(4) })
         root.addView(topChrome)
 
         webContainer = LinearLayout(this).apply {
@@ -185,9 +190,9 @@ class MainActivity : Activity() {
         controls = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER
-            setPadding(dp(3), dp(2), dp(3), dp(2))
-            background = glassBackground(0xD908090B.toInt(), 20f)
-            elevation = dp(2).toFloat()
+            setPadding(dp(2), 0, dp(2), 0)
+            setBackgroundColor(Color.TRANSPARENT)
+            elevation = 0f
         }
         controls.addView(makeButton("‹", "Voltar") {
             webView?.let { if (it.canGoBack()) it.goBack() }
@@ -218,9 +223,9 @@ class MainActivity : Activity() {
         return Button(this).apply {
             text = label
             contentDescription = description
-            textSize = 17f
+            textSize = 19f
             setTextColor(if (label == "+") accentColor else fgColor)
-            background = glassBackground(0x20FFFFFF, 15f)
+            background = Color.TRANSPARENT.toDrawableCompat()
             isAllCaps = false
             minWidth = 0
             minimumWidth = 0
@@ -229,11 +234,88 @@ class MainActivity : Activity() {
             stateListAnimator = null
             setPadding(dp(2), 0, dp(2), 0)
             layoutParams = LinearLayout.LayoutParams(0, dp(35), 1f).apply {
-                marginStart = dp(1)
-                marginEnd = dp(1)
+                marginStart = dp(0)
+                marginEnd = dp(0)
             }
             setOnClickListener { action() }
         }
+    }
+
+    private fun dismissSuggestions() {
+        suggestionTask?.let { addressBar.removeCallbacks(it) }
+        suggestionPopup?.dismiss()
+        suggestionPopup = null
+    }
+
+    private fun scheduleSuggestions(query: String) {
+        suggestionTask?.let { addressBar.removeCallbacks(it) }
+        if (!addressBar.hasFocus() || query.trim().length < 2) {
+            dismissSuggestions()
+            return
+        }
+        val task = Runnable { fetchSuggestions(query.trim()) }
+        suggestionTask = task
+        addressBar.postDelayed(task, 280L)
+    }
+
+    private fun fetchSuggestions(query: String) {
+        Thread {
+            val results = mutableListOf<String>()
+            var connection: HttpURLConnection? = null
+            try {
+                connection = (URL("https://suggestqueries.google.com/complete/search?client=firefox&q=" + Uri.encode(query)).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 2500
+                    readTimeout = 2500
+                    requestMethod = "GET"
+                    setRequestProperty("User-Agent", "NoxBrowser/1.5")
+                }
+                val data = connection.inputStream.bufferedReader().use { it.readText() }
+                val json = JSONArray(data)
+                val values = json.optJSONArray(1)
+                if (values != null) for (i in 0 until minOf(values.length(), 7)) {
+                    val value = values.optString(i)
+                    if (value.isNotBlank()) results.add(value)
+                }
+            } catch (_: Exception) {
+                // Suggestions are optional; navigation works without them.
+            } finally { connection?.disconnect() }
+            runOnUiThread {
+                if (addressBar.hasFocus() && addressBar.text.toString().trim() == query && results.isNotEmpty()) {
+                    showSuggestions(results)
+                } else if (results.isEmpty()) dismissSuggestions()
+            }
+        }.start()
+    }
+
+    private fun showSuggestions(items: List<String>) {
+        suggestionPopup?.dismiss()
+        val list = ListView(this).apply {
+            setBackgroundColor(0xFF101115.toInt())
+            divider = android.graphics.drawable.ColorDrawable(0xFF292A30.toInt())
+            dividerHeight = dp(1)
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_list_item_1, items).also { adapter ->
+                adapter.setDropDownViewResource(android.R.layout.simple_list_item_1)
+            }
+            setOnItemClickListener { _, _, position, _ ->
+                val chosen = items[position]
+                addressBar.setText(chosen)
+                addressBar.setSelection(chosen.length)
+                dismissSuggestions()
+                navigateFromAddress()
+            }
+        }
+        val popup = PopupWindow(list, addressBar.width.coerceAtLeast(dp(240)), ViewGroup.LayoutParams.WRAP_CONTENT, false).apply {
+            isOutsideTouchable = true
+            isFocusable = false
+            setBackgroundDrawable(GradientDrawable().apply {
+                setColor(0xFF101115.toInt())
+                cornerRadius = dp(14).toFloat()
+                setStroke(dp(1), 0x44FFFFFF)
+            })
+            elevation = dp(8).toFloat()
+        }
+        suggestionPopup = popup
+        popup.showAsDropDown(addressBar, -dp(26), dp(3))
     }
 
     private fun glassBackground(fill: Int, radiusDp: Float): GradientDrawable {
@@ -906,6 +988,9 @@ class MainActivity : Activity() {
             normalized == domain || normalized.endsWith("." + domain)
         }
     }
+
+    private fun Int.toDrawableCompat(): android.graphics.drawable.Drawable =
+        android.graphics.drawable.ColorDrawable(this)
 
     private fun dp(value: Int): Int =
         (value * resources.displayMetrics.density).toInt()
